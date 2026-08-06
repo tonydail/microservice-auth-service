@@ -1,0 +1,59 @@
+{
+  "name": "microservice-auth-service",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/microservice-auth-service",
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/jshint:2": {},
+    "ghcr.io/devcontainers-extra/features/turborepo-npm:1": {},
+    "ghcr.io/devcontainers/features/common-utils:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/copilot-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "ms-vscode.vscode-typescript-next",
+        "zixuanchen.vitest-explorer",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "EditorConfig.EditorConfig",
+        "yzhang.markdown-all-in-one",
+        "humao.rest-client",
+        // "ms-ossdata.vscode-pgsql",
+        "cweijan.vscode-postgresql-client2",
+        "ReneSaarsoo.sql-formatter-vsc",
+        "MylesMurphy.prettify-ts",
+        "Postman.postman-for-vscode"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+  "postStartCommand": "sudo chown -R node:node /microservice-auth-service/node_modules && sudo chown -R node:node /microservice-auth-service/dist && npm install &&  npm run db:migrate 2>/dev/null || true  && npm run db:seed 2>/dev/null || true && npm run build && npm start",
+  "forwardPorts": [
+    3001,
+    5433
+  ],
+  "portsAttributes": {
+    "3001": {
+      "label": "microservice-auth-service REST"
+    },
+    "5433": {
+      "label": "microservice-auth-service Postgres"
+    }
+  }
+}
