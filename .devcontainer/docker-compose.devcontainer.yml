@@ -1,0 +1,11 @@
+# Dev container overrides - only adds tooling env file
+
+services:
+  auth-app:
+    # Override command to fix volume permissions, install deps, run migrations, and sleep
+    # Note: Stop standalone services before opening in devcontainer if they're running
+    command: sh -c "sudo chown -R node:node /microservice-auth-service/node_modules /microservice-auth-service/dist && npm install && npx prisma generate && npm run db:migrate && npm run db:seed || true && sleep infinity"
+    
+    # Additional env file for dev tooling
+    env_file:
+      - ../../environment/common-services-app-tooling.env
