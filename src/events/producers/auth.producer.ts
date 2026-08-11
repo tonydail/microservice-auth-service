@@ -1,7 +1,7 @@
 import { Kafka } from 'kafkajs';
 import { v4 as uuidv4 } from 'uuid';
-import { config } from '../config/index';
-import { logger } from '../config/logger';
+import { config } from '../../config/index';
+import { logger } from '../../config/logger';
 
 export const USER_REGISTERED_TOPIC = 'auth.user.registered';
 
@@ -40,7 +40,10 @@ export async function publishUserRegistered(userId: string): Promise<void> {
     ],
   });
 
-  logger.info({ topic: USER_REGISTERED_TOPIC, eventId, userId }, 'Kafka event published');
+  logger.info(
+    { topic: USER_REGISTERED_TOPIC, eventId, userId },
+    `Event topic ${USER_REGISTERED_TOPIC} published`,
+  );
 }
 
 export async function disconnectKafkaProducer(): Promise<void> {

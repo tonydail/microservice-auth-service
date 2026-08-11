@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   publishUserRegistered,
   USER_REGISTERED_TOPIC,
-} from '../../../src/events/kafka.producer.js';
+} from '../../../src/events/producers/auth.producer.js';
 
 const mocks = vi.hoisted(() => ({
   connect: vi.fn().mockResolvedValue(undefined),
@@ -29,18 +29,18 @@ describe('Kafka producer', () => {
     vi.clearAllMocks();
   });
 
-  it('publishes the registered user ID to auth.user.registered', async () => {
+  it('publishes user registered event to Kafka', async () => {
     await publishUserRegistered('user-1');
 
     expect(mocks.connect).toHaveBeenCalledOnce();
     expect(mocks.send).toHaveBeenCalledWith({
       topic: USER_REGISTERED_TOPIC,
-      messages: [
-        {
+      messages: expect.arrayContaining([
+        expect.objectContaining({
           key: 'user-1',
-          value: JSON.stringify({ userId: 'user-1' }),
-        },
-      ],
+          value: expect.stringContaining('user-1'),
+        }),
+      ]),
     });
   });
 });

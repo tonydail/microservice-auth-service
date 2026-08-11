@@ -8,7 +8,16 @@ const mocks = vi.hoisted(() => ({
   createRefreshToken: vi.fn(),
   findRefreshToken: vi.fn(),
   revokeRefreshToken: vi.fn(),
-  publishUserRegistered: vi.fn(),
+}));
+
+vi.mock('../../../src/config/index.js', () => ({
+  config: {
+    JWT_SECRET: 'test-secret-key-at-least-16-chars',
+    JWT_ACCESS_EXPIRES_IN: '15m',
+    JWT_REFRESH_EXPIRES_IN: '7d',
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/testdb',
+    KAFKA_BROKERS: 'localhost:29092',
+  },
 }));
 
 vi.mock('../../../src/repositories/user.repository.js', () => ({
@@ -19,12 +28,6 @@ vi.mock('../../../src/repositories/user.repository.js', () => ({
     findRefreshToken = mocks.findRefreshToken;
     revokeRefreshToken = mocks.revokeRefreshToken;
   },
-}));
-vi.mock('../../../src/events/outbox/outbox.writer.js', () => ({
-  writeOutboxEvent: vi.fn(),
-}));
-vi.mock('../../../src/events/kafka.producer.js', () => ({
-  publishUserRegistered: mocks.publishUserRegistered,
 }));
 
 describe('AuthService', () => {
@@ -54,7 +57,34 @@ describe('AuthService', () => {
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
-      expect(mocks.publishUserRegistered).toHaveBeenCalledWith('user-1');
+      expect(result.refreshToken).toBe('refresh-token-value');
+    });
+
+    it('passes outbox event data to repository for transactional write', async () => {
+      mocks.findByEmail.mockResolvedValue(null);
+      mocks.createWithRefreshToken.mockResolvedValue({
+        user: { id: 'user-123', email: 'new@test.com' },
+        refreshToken: { token: 'refresh-token-value' },
+      });
+
+      await authService.register({ email: 'new@test.com', password: 'password123' });
+
+      // Verify createWithRefreshToken was called with outbox event data
+      expect(mocks.createWithRefreshToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'new@test.com',
+          passwordHash: expect.any(String),
+        }),
+        expect.any(Date), // expiresAt
+        expect.objectContaining({
+          eventType: 'user.registered',
+          aggregateId: expect.any(String),
+          payload: expect.objectContaining({
+            userId: expect.any(String),
+            email: 'new@test.com',
+          }),
+        }),
+      );
     });
   });
 
