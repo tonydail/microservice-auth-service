@@ -4,32 +4,34 @@ import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config/index';
 import { AppError } from '../middleware/errorHandler';
 import { UserRepository } from '../repositories/user.repository';
-import { writeOutboxEvent } from '../events/outbox/outbox.writer';
-import { publishUserRegistered } from '../events/kafka.producer';
 import type { RegisterDto, LoginDto, TokenPair } from '../types/auth.types';
 
 export class AuthService {
   private readonly userRepo = new UserRepository();
 
+  /**
+   * Registers a new user with transactional outbox pattern.
+   * User creation, refresh token, and outbox event are written atomically.
+   * Debezium will publish the event from the outbox table to Kafka.
+   */
   async register(dto: RegisterDto): Promise<TokenPair> {
     const existing = await this.userRepo.findByEmail(dto.email);
     if (existing) throw new AppError(409, 'Email already in use');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const userId = uuidv4();
+    const eventId = uuidv4();
 
+    // Create user, refresh token, and outbox event in a single transaction
     const { user, refreshToken } = await this.userRepo.createWithRefreshToken(
       { id: userId, email: dto.email, passwordHash },
       this.buildRefreshExpiry(),
+      {
+        aggregateId: userId,
+        eventType: 'user.registered',
+        payload: { eventId, userId, email: dto.email },
+      },
     );
-
-    // Write domain event to outbox inside the same transaction (handled in repository)
-    await writeOutboxEvent({
-      aggregateId: user.id,
-      eventType: 'user.registered',
-      payload: { userId: user.id, email: user.email },
-    });
-    await publishUserRegistered(user.id);
 
     return {
       accessToken: this.signAccessToken(user.id),

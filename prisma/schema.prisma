@@ -32,10 +32,10 @@ model RefreshToken {
 // Never write to this table outside of a $transaction block.
 model OutboxEvent {
   id          String   @id @default(uuid())
-  aggregateId String
-  eventType   String
+  aggregateId String   @map("aggregate_id")
+  eventType   String   @map("event_type")
   payload     Json
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("outbox_events")
 }
