@@ -3,55 +3,65 @@ services:
     image: mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye
     container_name: ${AUTH_APP_HOST:-microservice-auth-service-app}
     user: node
+    working_dir: /microservice-auth-service
+    restart: unless-stopped
+
     volumes:
       - ..:/microservice-auth-service:cached
       - auth-node-modules:/microservice-auth-service/node_modules
       - auth-dist:/microservice-auth-service/dist
-    working_dir: /microservice-auth-service
+
     # For standalone mode: run the service
-    # For devcontainer mode: this gets overridden to "sleep infinity" 
-    command: sh -c "sudo chown -R node:node /microservice-auth-service/node_modules /microservice-auth-service/dist && npm install && npx prisma generate && npm run db:migrate && npm run db:seed || true && npm run build && /microservice-auth-service/register-outbox-connector.sh && npm start"
+    # For devcontainer mode: this gets overridden to "sleep infinity"
+    command: |
+      sh -c "chmod +x .devcontainer/scripts/*.sh && .devcontainer/scripts/container-startup.sh standalone"
+
     env_file:
       - ../../environment/container-hosts.env
       - ../../environment/common-service-db.env
       - ../../environment/microservice-auth-service-db.env
       - ../../environment/common-services-app.env
       - ../../environment/microservice-auth-service-app.env
+
     environment:
       - NODE_ENV=development
-    # Ports are not exposed to host - only accessible via microservices-net
-    # For dev testing, you can temporarily expose them if needed
+
     depends_on:
       auth-db:
         condition: service_healthy
+
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:$$AUTH_APP_PORT/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
     networks:
       - microservices-net
-    restart: unless-stopped
 
   auth-db:
     image: postgres:16-alpine
     container_name: ${AUTH_DB_HOST:-microservice-auth-service-db}
     restart: unless-stopped
+    
+    # Enable logical replication for Debezium CDC
+    command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
+
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+
     env_file:
       - ../../environment/container-hosts.env
       - ../../environment/common-service-db.env
       - ../../environment/microservice-auth-service-db.env
-    # Port not exposed to host - only accessible via microservices-net
-    volumes:
-      - auth-db-data:/var/lib/postgresql/data
-    # Enable logical replication for Debezium CDC
-    command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$AUTH_DB_USER -d $$AUTH_DB_NAME"]
       interval: 5s
       timeout: 5s
       retries: 5
+
     networks:
       - microservices-net
 

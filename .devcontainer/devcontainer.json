@@ -22,7 +22,6 @@
         "esbenp.prettier-vscode",
         "prisma.prisma",
         "ms-azuretools.vscode-docker",
-        "eamodio.gitlens",
         "ms-vscode.vscode-typescript-next",
         "zixuanchen.vitest-explorer",
         "GitHub.copilot",
