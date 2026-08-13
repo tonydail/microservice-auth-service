@@ -1,0 +1,11 @@
+name: PR Quality Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-link:
+    uses: tonydail/microservices-ops/.github/workflows/validate-issue-link.yml@develop
+    with:
+      username: tonydail
