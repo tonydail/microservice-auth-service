@@ -1,11 +1,11 @@
 services:
   auth-app:
     image: mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye
-    container_name: ${AUTH_APP_HOST:-microservice-auth-service-app}
+    container_name: microservice-auth-service-app
     user: node
     working_dir: /microservice-auth-service
     restart: unless-stopped
-
+    tty: true
     volumes:
       - ..:/microservice-auth-service:cached
       - auth-node-modules:/microservice-auth-service/node_modules
@@ -17,21 +17,18 @@ services:
       sh -c "chmod +x .devcontainer/scripts/*.sh && .devcontainer/scripts/container-startup.sh standalone"
 
     env_file:
-      - ../../environment/container-hosts.env
-      - ../../environment/common-service-db.env
-      - ../../environment/microservice-auth-service-db.env
-      - ../../environment/common-services-app.env
-      - ../../environment/microservice-auth-service-app.env
-
-    environment:
-      - NODE_ENV=development
+      # - ../../environment/container-hosts.env
+      - ../../environment/common-db.env
+      - ../../environment/auth-service-db.env
+      - ../../environment/common-app.env
+      - ../../environment/auth-service.env
 
     depends_on:
       auth-db:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:$$AUTH_APP_PORT/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:$$PORT/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,9 +39,9 @@ services:
 
   auth-db:
     image: postgres:16-alpine
-    container_name: ${AUTH_DB_HOST:-microservice-auth-service-db}
+    container_name: microservice-auth-service-db
     restart: unless-stopped
-    
+
     # Enable logical replication for Debezium CDC
     command: postgres -c wal_level=logical -c max_replication_slots=4 -c max_wal_senders=4
 
@@ -52,12 +49,11 @@ services:
       - auth-db-data:/var/lib/postgresql/data
 
     env_file:
-      - ../../environment/container-hosts.env
-      - ../../environment/common-service-db.env
-      - ../../environment/microservice-auth-service-db.env
+      - ../../environment/common-db.env
+      - ../../environment/auth-service-db.env
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$AUTH_DB_USER -d $$AUTH_DB_NAME"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5

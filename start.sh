@@ -28,6 +28,5 @@ echo "  Auth service started!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 $COMPOSE --project-name microservice-auth-service_devcontainer -f .devcontainer/docker-compose.yml ps
 
-echo ""
-echo "View logs: docker logs -f microservice-auth-service-app"
-echo "Stop:      ./stop.sh"
+docker logs -f microservice-auth-service-app
+
