@@ -11,7 +11,6 @@ const app = express();
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
-app.use('/health', (_req, res) => res.json({ status: 'ok', service: 'auth-service' }));
 app.use('/', authRouter);
 app.use(errorHandler);
 

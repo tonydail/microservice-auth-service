@@ -1,4 +1,6 @@
-import { PrismaClient, User, RefreshToken, Prisma } from '@prisma/client';
+import { PrismaClient, User, RefreshToken, Prisma, Role } from '@prisma/client';
+import { AppError } from '../middleware/errorHandler';
+import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -8,47 +10,68 @@ interface OutboxEventData {
   payload: Prisma.InputJsonValue;
 }
 
+// User with roles included
+export type UserWithRoles = User & {
+  userRoles: Array<{
+    role: Role;
+  }>;
+};
+
 export class UserRepository {
   findByEmail(email: string): Promise<User | null> {
     return prisma.user.findUnique({ where: { email } });
   }
 
-  /**
-   * Creates a user with refresh token and optional outbox event in a single transaction.
-   * Implements the Transactional Outbox pattern: all operations succeed or fail together.
-   */
-  async createWithRefreshToken(
-    data: { id: string; email: string; passwordHash: string },
-    expiresAt: Date,
-    outboxEvent?: OutboxEventData,
-  ): Promise<{ user: User; refreshToken: RefreshToken }> {
-    const { v4: uuidv4 } = await import('uuid');
-    const token = uuidv4();
+  findByEmailWithRoles(email: string): Promise<UserWithRoles | null> {
+    return prisma.user.findUnique({
+      where: { email },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+  }
 
-    if (outboxEvent) {
-      // Include outbox event in the transaction
+  /**
+   * Creates a user add assigns the default role in a single transaction.
+   */
+  async createUser(data: {
+    id: string;
+    email: string;
+    passwordHash: string;
+  }): Promise<{ user: User }> {
+    try {
       const result = await prisma.$transaction(async (tx) => {
         const user = await tx.user.create({ data });
-        const refreshToken = await tx.refreshToken.create({
-          data: { token, userId: data.id, expiresAt },
-        });
+
+        // Assign default role
+        const defaultRole = await tx.role.findUnique({ where: { name: 'user' } });
+        if (defaultRole) {
+          await tx.userRole.create({
+            data: {
+              userId: user.id,
+              roleId: defaultRole.id,
+            },
+          });
+        }
+        const eventId = uuidv4();
         await tx.outboxEvent.create({
           data: {
-            aggregateId: outboxEvent.aggregateId,
-            eventType: outboxEvent.eventType,
-            payload: outboxEvent.payload,
+            aggregateId: user.id,
+            eventType: 'user.registered',
+            payload: { eventId, userId: user.id, email: user.email },
           },
         });
-        return { user, refreshToken };
+
+        return { user };
       });
+
       return result;
-    } else {
-      // No outbox event, just create user and refresh token
-      const [user, refreshToken] = await prisma.$transaction([
-        prisma.user.create({ data }),
-        prisma.refreshToken.create({ data: { token, userId: data.id, expiresAt } }),
-      ]);
-      return { user, refreshToken };
+    } catch (error) {
+      throw new AppError(500, 'Failed to create user', { cause: error });
     }
   }
 
@@ -63,7 +86,68 @@ export class UserRepository {
     return prisma.refreshToken.findUnique({ where: { token } });
   }
 
+  async findRefreshTokenWithUser(
+    token: string,
+  ): Promise<(RefreshToken & { user: UserWithRoles }) | null> {
+    return prisma.refreshToken.findUnique({
+      where: { token },
+      include: {
+        user: {
+          include: {
+            userRoles: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   revokeRefreshToken(token: string): Promise<RefreshToken> {
     return prisma.refreshToken.update({ where: { token }, data: { revoked: true } });
+  }
+
+  async assignRole(userId: string, roleName: string): Promise<void> {
+    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (!role) throw new Error(`Role "${roleName}" not found`);
+
+    await prisma.userRole.create({
+      data: {
+        userId,
+        roleId: role.id,
+      },
+    });
+  }
+
+  async removeRole(userId: string, roleName: string): Promise<void> {
+    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (!role) throw new Error(`Role "${roleName}" not found`);
+
+    await prisma.userRole.deleteMany({
+      where: {
+        userId,
+        roleId: role.id,
+      },
+    });
+  }
+
+  async getUserRoles(userId: string): Promise<string[]> {
+    const userRoles = await prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true },
+    });
+    return userRoles.map((ur) => ur.role.name);
+  }
+
+  async createOutboxEvent(event: OutboxEventData): Promise<void> {
+    await prisma.outboxEvent.create({
+      data: {
+        aggregateId: event.aggregateId,
+        eventType: event.eventType,
+        payload: event.payload,
+      },
+    });
   }
 }
