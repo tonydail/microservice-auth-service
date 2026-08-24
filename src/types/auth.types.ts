@@ -20,5 +20,11 @@ export type RefreshTokenDto = z.infer<typeof RefreshTokenSchema>;
 
 export interface TokenPair {
   accessToken: string;
+  tokenType: 'Bearer';
+  expiresIn: number; // in seconds
   refreshToken: string;
+}
+
+export interface AuthServiceRegisterResponse {
+  email: string;
 }

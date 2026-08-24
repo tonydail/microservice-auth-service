@@ -23,13 +23,23 @@ afterAll(async () => {
 });
 
 describe('AuthService integration', () => {
-  it('registers a user and returns token pair', async () => {
+  it('registers a user and returns email', async () => {
     const result = await authService.register({
       email: 'integration@test.com',
       password: 'securepassword',
     });
-    expect(result.accessToken).toBeTruthy();
-    expect(result.refreshToken).toBeTruthy();
+    expect(result.email).toBeTruthy();
+  });
+
+  it('logins a user and returns a token pair', async () => {
+    const result = await authService.login({
+      email: 'integration@test.com',
+      password: 'securepassword',
+    });
+    expect(result).toHaveProperty('accessToken');
+    expect(result).toHaveProperty('refreshToken');
+    expect(result).toHaveProperty('tokenType', 'Bearer');
+    expect(result).toHaveProperty('expiresIn');
   });
 
   it('creates an outbox event on registration', async () => {

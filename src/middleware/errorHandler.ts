@@ -1,14 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { logger } from '../config/logger';
+import { ApiResponse } from '../types/apiResponse';
 
 export class AppError extends Error {
   constructor(
     public readonly statusCode: number,
     message: string,
+    cause?: ErrorOptions,
   ) {
-    super(message);
+    super(message, { cause });
     this.name = 'AppError';
+  }
+
+  toJSON(): { message: string } {
+    return {
+      message: this.message,
+    };
   }
 }
 
@@ -19,7 +27,8 @@ export function errorHandler(
   _next: NextFunction,
 ): void {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({ error: err.message });
+    const errorResponse = ApiResponse.Failure(err);
+    res.status(err.statusCode).json(errorResponse);
     return;
   }
 

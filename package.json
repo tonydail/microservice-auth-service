@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "clean": "rm -rvf dist/*",
+    "clean:node_modules": "rm -rvf node_modules/*",
+    "clean:all": "npm run clean && npm run clean:node_modules",
     "dev": "ts-node-dev --inspect=0.0.0.0:9229 --respawn --transpile-only src/index.ts",
     "build": "tsc && mkdir -p dist/grpc/proto && cp src/grpc/proto/*.proto dist/grpc/proto/",
     "start": "node dist/index.js",

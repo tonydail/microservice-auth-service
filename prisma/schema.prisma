@@ -15,6 +15,30 @@ model User {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   refreshTokens  RefreshToken[]
+  userRoles      UserRole[]
+}
+
+model Role {
+  id          String     @id @default(uuid())
+  name        String     @unique // "admin", "moderator", "user", etc.
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userRoles   UserRole[]
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
 }
 
 model RefreshToken {
