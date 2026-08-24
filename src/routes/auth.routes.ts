@@ -18,7 +18,7 @@ router.post('/logout', (req, res, next) => {
 });
 
 router.get('/validate', (req, res, next) => {
-  void controller.validate(req, res, next).catch(next);
+  void controller.validate(req, res, next);
 });
 
 router.get('/health', (_req, res) => res.json({ status: 'ok', service: 'auth-service' }));

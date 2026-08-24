@@ -53,17 +53,23 @@ export class AuthController {
     }
   };
 
-  validate = (req: Request, res: Response): void => {
+  validate = (req: Request, res: Response, next: NextFunction): void => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
         res.status(400).json(ApiResponse.Failure('Authorization header missing'));
         return;
       }
-      const isValid = this.authService.validate(token);
-      isValid ? res.status(200).send() : res.status(401).send();
+      const tokenParts = this.authService.validate(token);
+      if (tokenParts) {
+        res.header('X-User-Id', tokenParts.sub);
+        res.header('X-User-Roles', tokenParts.roles.join(','));
+        res.status(200).send();
+      } else {
+        next(new Error('Invalid token'));
+      }
     } catch (err) {
-      res.status(401).send();
+      next(err);
     }
   };
 }

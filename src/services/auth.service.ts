@@ -80,12 +80,12 @@ export class AuthService {
     return tokenPair;
   }
 
-  validate(token: string): boolean {
+  validate(token: string): { sub: string; email: string; roles: string[] } | null {
     const existing = this.verifyAccessToken(token);
-    if (!existing) {
-      return false;
+    if (existing) {
+      return { sub: existing.sub, email: existing.email, roles: existing.roles };
     }
-    return true;
+    return null;
   }
 
   async logout(token: string): Promise<void> {
