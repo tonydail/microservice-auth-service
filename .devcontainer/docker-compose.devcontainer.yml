@@ -2,7 +2,7 @@
 services:
   auth-app:
     volumes:
-      - ../../git-scripts:/microservice-auth-service/git-scripts:cached
+      - ../../workflow-scripts:/microservice-auth-service/workflow-scripts:cached
     tty: true
     # Note: Stop standalone services before opening in devcontainer if they're running
     command: |

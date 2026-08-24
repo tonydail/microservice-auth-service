@@ -31,16 +31,13 @@ startup-standalone() {
 startup-dev() {
 	echo '==> Executing development container startup script...'
 
-	if [ ! -f "./git-scripts/git-workflows.sh" ]; then
-		echo '==> Git workflows script not found!'
+	if [ ! -f "./workflow-scripts/workflow-helper" ]; then
+		echo '==> Workflow helper script not found!'
 	else
-		echo '==> Git workflows script found! Adding to ~/.bashrc...'
-		echo "source ./git-scripts/git-workflows.sh" >> ~/.bashrc
+		echo '==> Workflow helper script found! Adding to ~/.bashrc...'
+		echo "source ./workflow-scripts/workflow-helper" >> ~/.bashrc
 	fi
-
 	
-	# echo '==> Starting application in development mode...'
-	# npm run dev
 	sleep infinity
 
 }
