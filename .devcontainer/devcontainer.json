@@ -20,7 +20,6 @@
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "prisma.prisma",
         "ms-azuretools.vscode-docker",
         "ms-vscode.vscode-typescript-next",
         "zixuanchen.vitest-explorer",
@@ -28,9 +27,10 @@
         "GitHub.copilot-chat",
         "EditorConfig.EditorConfig",
         "yzhang.markdown-all-in-one",
-        "humao.rest-client",
-        "ReneSaarsoo.sql-formatter-vsc",
         "MylesMurphy.prettify-ts",
+        "ms-vscode.live-server",
+        "vitest.explorer",
+        "SangeethPromod.schema-lens"
       ],
       "settings": {
         "editor.formatOnSave": true,
