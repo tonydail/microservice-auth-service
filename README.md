@@ -10,9 +10,10 @@ The Authentication Service handles:
 - **User Registration**: Create new user accounts with secure password hashing
 - **Login**: Authenticate users and issue JWT tokens
 - **Token Management**: Issue access tokens (15min) and refresh tokens (7 days)
-- **Token Validation**: gRPC endpoint for other services to validate tokens
+- **Token Validation**: gRPC and REST endpoints for token validation
 - **Token Refresh**: Exchange refresh tokens for new access tokens
 - **Logout/Revocation**: Invalidate refresh tokens
+- **Role-Based Authorization**: JWT tokens include user roles for fine-grained access control
 
 ## 🏗️ Architecture Overview
 
@@ -92,9 +93,12 @@ await prisma.$transaction([
 Debezium watches the PostgreSQL WAL and publishes events to Kafka, ensuring exactly-once semantics.
 
 ### JWT Token Strategy
-- **Access Token**: Short-lived (15 minutes), contains user ID and role
+- **Access Token**: Short-lived (15 minutes), contains user ID and roles array
 - **Refresh Token**: Long-lived (7 days), stored in database for revocation support
-- **Validation**: Other services call `ValidateToken` gRPC endpoint to verify tokens
+- **Validation**: 
+  - REST endpoint (`GET /validate`) for nginx gateway integration
+  - gRPC endpoint (`ValidateToken`) for direct service-to-service calls
+  - Returns user ID and roles in response headers
 
 ### Configuration
 Only `src/config/index.ts` reads `process.env` (Zod-validated at startup). Configuration is type-safe throughout the application.
@@ -236,7 +240,7 @@ POST /auth/register          # Register new user
 POST /auth/login            # Login and get tokens
 POST /auth/refresh          # Refresh access token
 POST /auth/logout           # Logout (revoke refresh token)
-GET  /auth/validate         # Validate token (for testing)
+GET  /validate              # Validate token (used by nginx gateway)
 ```
 
 ### gRPC API (Port 50051)
@@ -248,6 +252,11 @@ service AuthService {
 ```
 
 Called by other services to validate JWT tokens without REST overhead.
+
+**Response includes**:
+- `userId`: User's unique identifier
+- `roles`: Array of role names assigned to the user
+- `valid`: Boolean indicating token validity
 
 ## 🔄 Events Published
 
@@ -269,6 +278,30 @@ Require PostgreSQL. Tests run against a real database.
 
 ```bash
 npm run test:integration
+```
+
+### Test Coverage
+Generate coverage reports:
+
+```bash
+npm run test:coverage
+```
+
+Coverage reports are generated in `coverage/` directory with HTML and JSON formats.
+
+### CI/CD
+Automated testing runs on:
+- Pull requests to `develop` or `main`
+- Pushes to `develop` or `main`
+
+GitHub Actions workflow includes:
+- PostgreSQL service container
+- All tests (unit + integration)
+- Coverage reporting
+
+**Local workflow testing** with `act`:
+```bash
+./run-tests-with-act.sh
 ```
 
 ### Test Structure
